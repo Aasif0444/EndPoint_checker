@@ -60,16 +60,11 @@ def check():
             except requests.exceptions.RequestException:
                 damaged_endpoints += 1
                 damaged_endpoints_list.append(url)
-                yield f"❌ Failed to connect: {url}\n"
+                
 
             time.sleep(0.3)
-
-        yield f"\n📊 total_endpoints = {total_endpoints}\n"
-        yield f"✅ running_endpoints = {running_endpoints}\n"
-        yield f"❌ damaged_endpoints = {damaged_endpoints}\n"
-        yield "✅ Completed.\n"
-
-    return Response(generate_logs(), mimetype='text/plain')
+            
+    return 
 
 
 
