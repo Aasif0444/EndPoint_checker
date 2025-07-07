@@ -61,7 +61,7 @@ def check():
             damaged_endpoints_list.append(url)
             damaged_endpoints += 1
 
-        time.sleep(0.3)
+        time.sleep(0.2)
 
     
 
