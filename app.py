@@ -7,6 +7,9 @@ import os
 
 app = Flask(__name__)
 
+@app.route('/')
+def home():
+    return "this is working api"
 
 @app.route('/check', methods=['POST'])
 def check():
