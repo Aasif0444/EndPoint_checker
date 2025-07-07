@@ -16,6 +16,7 @@ def check():
     data = request.get_json()
     sitemap_url = data.get('sitemap_url')
     only_count = data.get('only_count',False)
+    limit = data.get('limit')
 
     if not sitemap_url:
         return jsonify({'error': 'Missing sitemap_url'}), 400
@@ -37,11 +38,13 @@ def check():
     if only_count:
         return jsonify({'total_endpoints':total_endpoints})
     
+    url_to_check = loc_tags[:int(limit)] if limit else loc_tags
+
     running_endpoints = 0
     damaged_endpoints = 0
     damaged_endpoints_list = []
 
-    for tag in loc_tags:
+    for tag in url_to_check:
         url = tag.text
 
         try:
