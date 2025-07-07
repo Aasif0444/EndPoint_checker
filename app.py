@@ -15,6 +15,7 @@ def home():
 def check():
     data = request.get_json()
     sitemap_url = data.get('sitemap_url')
+    only_count = data.get('only_count',False)
 
     if not sitemap_url:
         return jsonify({'error': 'Missing sitemap_url'}), 400
@@ -31,20 +32,22 @@ def check():
 
     soup = BeautifulSoup(response.content, 'xml')
     loc_tags = soup.find_all('loc')
+    total_endpoints = len(loc_tags)
 
-    total_endpoints = 0
+    if only_count:
+        return jsonify({'total_endpoints':total_endpoints})
+    
     running_endpoints = 0
     damaged_endpoints = 0
     damaged_endpoints_list = []
 
     for tag in loc_tags:
         url = tag.text
-        total_endpoints += 1
 
         try:
             response = requests.get(url, timeout=5)
             if response.status_code in (200, 301, 302):
-                print("✅ {url}")
+                print(f"✅ {url}")
                 running_endpoints += 1
             else:
                 print(f"❌ {url}")
