@@ -1,4 +1,4 @@
-from flask import Flask,redirect,render_template,request,jsonify,Response
+from flask import Flask,redirect,render_template,request,jsonify
 from bs4 import BeautifulSoup
 import requests
 import lxml
@@ -8,68 +8,61 @@ import os
 app = Flask(__name__)
 
 
-@app.route('/')
-def home_page():
-    return "flask app running fine"
-
 @app.route('/check', methods=['POST'])
 def check():
     data = request.get_json()
     sitemap_url = data.get('sitemap_url')
 
-    def generate_logs():
-        if not sitemap_url:
-            yield "❌ Missing sitemap_url\n"
-            return
+    if not sitemap_url:
+        return jsonify({'error': 'Missing sitemap_url'}), 400
 
-        yield f"🔍 Fetching sitemap: {sitemap_url}\n"
+    try:
+        response = requests.get(sitemap_url)
+        content_type = response.headers.get('Content-Type', '')
+        if 'xml' not in content_type:
+            print("❌ Not a valid XML file.")
+            return jsonify({'error': 'Not a valid XML file'}), 400
+    except Exception as e:
+        print("❌ Sitemap not found or site unreachable.")
+        return jsonify({'error': 'Sitemap not found or site is unreachable'}), 400
+
+    soup = BeautifulSoup(response.content, 'xml')
+    loc_tags = soup.find_all('loc')
+
+    total_endpoints = 0
+    running_endpoints = 0
+    damaged_endpoints = 0
+    damaged_endpoints_list = []
+
+    for tag in loc_tags:
+        url = tag.text
+        total_endpoints += 1
 
         try:
-            response = requests.get(sitemap_url)
-            content_type = response.headers.get('Content-Type')
-
-            if 'xml' not in content_type:
-                yield "❌ Not proper XML file found\n"
-                return
-        except:
-            yield '❌ XML not found or site unreachable\n'
-            return
-
-        soup = BeautifulSoup(response.content, 'xml')
-        loc_tags = soup.find_all('loc')
-
-        total_endpoints = 0
-        running_endpoints = 0
-        damaged_endpoints = 0
-        damaged_endpoints_list = []
-
-        for tag in loc_tags:
-            url = tag.text
-            total_endpoints += 1
-            yield f"🔗 Checking {total_endpoints} of {len(loc_tags)} → {url}\n"
-
-            try:
-                response = requests.get(url, timeout=5)
-                if response.status_code in (200, 301, 302):
-                    running_endpoints += 1
-                    yield f"✅ {url}\n"
-                else:
-                    damaged_endpoints += 1
-                    damaged_endpoints_list.append(url)
-                    yield f"❌ {url} [{response.status_code}]\n"
-            except requests.exceptions.RequestException:
-                damaged_endpoints += 1
+            response = requests.get(url, timeout=5)
+            if response.status_code in (200, 301, 302):
+                print("✅ {url}")
+                running_endpoints += 1
+            else:
+                print(f"❌ {url}")
                 damaged_endpoints_list.append(url)
-                
+                damaged_endpoints += 1
+        except requests.exceptions.RequestException:
+            print(f"❌ {url}")
+            damaged_endpoints_list.append(url)
+            damaged_endpoints += 1
 
-            time.sleep(0.3)
-            
-    return 
+        time.sleep(0.3)
 
+    
 
-
-
+    return jsonify({
+        'total_endpoints': total_endpoints,
+        'running_endpoints': running_endpoints,
+        'damaged_endpoints': damaged_endpoints,
+        'damaged_endpoints_list': damaged_endpoints_list,
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0',port=port)
